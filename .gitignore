@@ -1,0 +1,87 @@
+# Build directories
+build/
+Build/
+cmake-build-*/
+
+# Compiled Object files
+*.o
+*.obj
+*.ko
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.a
+*.lib
+*.la
+*.lo
+
+# Executables
+*.exe
+*.out
+*.app
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+install_manifest.txt
+compile_commands.json
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Testing
+Testing/
+CTestTestfile.cmake
+_deps/
+
+# Coverage reports
+*.gcov
+*.gcda
+*.gcno
+coverage/
+*.info
+
+# Documentation builds (if you add Doxygen later)
+docs/html/
+docs/latex/
+Doxyfile.bak
+
+# Package managers
+.conan/
+vcpkg_installed/
+_deps/
+
+# Core dumps
+core
+core.*
+*.core
+
+# Python bindings build (for future pybind11)
+*.egg-info/
+dist/
+*.whl
+__pycache__/
+*.pyc
+
