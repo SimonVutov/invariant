@@ -26,8 +26,9 @@ invariant/
 │       └── invariant.hpp       # Convenience header (includes all)
 ├── examples/
 │   ├── CMakeLists.txt
-│   ├── sample_usage.cpp        # Matrix operations demo
-│   └── linear_fit.cpp          # Polynomial fitting demo
+│   ├── sample_usage.cpp              # Matrix operations demo
+│   ├── linear_fit.cpp                # Polynomial fitting demo
+│   └── jacobi_interpolation.cpp      # Jacobi solver & linear interpolation demo
 └── tests/
     ├── CMakeLists.txt
     └── test_matrix.cpp         # Unit tests
@@ -115,12 +116,31 @@ The library includes examples:
     - Polynomial evaluation with Horner's method
     - Coefficient extraction and verification
 
-Run them after building:
+- **`examples/jacobi_interpolation`** - Jacobi iterative solver:
+    - Solving linear systems using the Jacobi iterative method
+    - Least-squares linear interpolation of 4 data points
+    - Building Vandermonde matrices and normal equations
+    - Diagonal dominance verification
+    - Comparison of Jacobi iteration vs Gaussian elimination
+
+### Running the Examples
+
+First, build the project from scratch:
 
 ```bash
-cd build
+git clone https://github.com/simonvutov/invariant.git
+cd invariant
+mkdir build && cd build
+cmake ..
+make
+```
+
+Then run any example:
+
+```bash
 ./examples/sample_usage
 ./examples/linear_fit
+./examples/jacobi_interpolation
 ```
 
 ## Testing

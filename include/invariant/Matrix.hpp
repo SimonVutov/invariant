@@ -255,6 +255,43 @@ public:
          std::cout << std::endl;
         return coeffs;
     }
+    // Solve a linear system Ax = b using the Jacobi iterative method
+    // Iteratively solves by decomposing A = D + R, then x_{k+1} = D^{-1}(b - R*x_k)
+    // Converges when A is strictly diagonally dominant
+    Matrix solve_jacobi(const Matrix& b, size_t maxIterations = 10000, double tolerance = 1e-10) const {
+        if (rows != cols || b.rows != rows || b.cols != 1) {
+            throw std::invalid_argument("Invalid dimensions for solving linear system.");
+        }
+        // Check for zero diagonal elements
+        for (size_t i = 0; i < rows; ++i) {
+            if (std::abs(at(i, i)) < 1e-15) {
+                throw std::invalid_argument("Jacobi method requires non-zero diagonal elements.");
+            }
+        }
+        // Initial guess: x = 0
+        Matrix x(rows, 1, T(0));
+        Matrix x_new(rows, 1, T(0));
+
+        for (size_t iter = 0; iter < maxIterations; ++iter) {
+            for (size_t i = 0; i < rows; ++i) {
+                T sigma = T(0);
+                for (size_t j = 0; j < cols; ++j) {
+                    if (j != i) {
+                        sigma += at(i, j) * x.at(j, 0);
+                    }
+                }
+                x_new.at(i, 0) = (b.at(i, 0) - sigma) / at(i, i);
+            }
+            // Check convergence using two-norm of difference
+            double diff = x_new.two_norm_euclidian_length_difference(x);
+            x = x_new;
+            if (diff < tolerance) {
+                return x;
+            }
+        }
+        return x;
+    }
+
     // Non-mutable power function using exponentiation by squaring
     Matrix<T> power(int exponent) {
         if (rows != cols) {
