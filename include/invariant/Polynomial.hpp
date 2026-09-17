@@ -6,8 +6,11 @@
 
 namespace invariant {
 
+template <typename T> T pow_O_ln_n_rec(T x, int n);
+
 template <typename T>
-T polyval_O_n_ln_n_rec(T coeffs[], unsigned int degree, T x) {
+T polyval_O_n_ln_n_rec(const T coeffs[], unsigned int degree, T x) {
+    if (!coeffs) throw std::invalid_argument("Null polynomial coefficients.");
     T result{ coeffs[0]};
     for (unsigned int k{1}; k <= degree; k++) {
         result += coeffs[k] * pow_O_ln_n_rec(x, k);
@@ -17,6 +20,8 @@ T polyval_O_n_ln_n_rec(T coeffs[], unsigned int degree, T x) {
 
 template <typename T>
 T pow_O_ln_n_iter(T x, int n) {
+    if (n < 0 && (x == T{} || !std::is_floating_point_v<T>))
+        throw std::domain_error("Negative powers require nonzero floating-point base.");
     if (n >= 0) {
         T result = T(1);
         while (n > 0) {
@@ -27,14 +32,15 @@ T pow_O_ln_n_iter(T x, int n) {
         return result;
     }
     else if (n == INT_MIN) {
-        return pow_O_ln_n_iter(1.0/x, -(n+1))/x;
+        return pow_O_ln_n_iter(T(1)/x, -(n+1))/x;
     } else {
-        return pow_O_ln_n_iter( 1.0/x, -n);
+        return pow_O_ln_n_iter( T(1)/x, -n);
     }
 }
 
 template <typename T>
-T polyval_horner (T coeffs[], unsigned int degree, T x) {
+T polyval_horner (const T coeffs[], unsigned int degree, T x) {
+    if (!coeffs) throw std::invalid_argument("Null polynomial coefficients.");
     T result{coeffs[degree]};
     for (unsigned int k{degree - 1}; k <= degree; k--) {
         result = result * x + coeffs[k];
@@ -42,8 +48,9 @@ T polyval_horner (T coeffs[], unsigned int degree, T x) {
     return result;
 }
 template <typename T> // 1% faster version with pointers
-T polyval_horner2 (T coeffs[], unsigned int degree, T x) {
-    T *coeff{coeffs + degree};
+T polyval_horner2 (const T coeffs[], unsigned int degree, T x) {
+    if (!coeffs) throw std::invalid_argument("Null polynomial coefficients.");
+    const T *coeff{coeffs + degree};
     T result{*coeff};
     while (coeff > coeffs) {
         result = x*result + *--coeff;
@@ -54,6 +61,8 @@ T polyval_horner2 (T coeffs[], unsigned int degree, T x) {
 // A recursive means of calculating x^n
 template <typename T>
 T pow_O_ln_n_rec(T x, int n) {
+    if (n < 0 && (x == T{} || !std::is_floating_point_v<T>))
+        throw std::domain_error("Negative powers require nonzero floating-point base.");
     if (n > 0) {
         T result{pow_O_ln_n_rec(x, n/2)};
         result *= result;
@@ -61,15 +70,16 @@ T pow_O_ln_n_rec(T x, int n) {
     } else if (n == 0) {
         return 1.0;
     } else if (n == INT_MIN) {
-        return pow_O_ln_n_rec( 1.0/x, -(n+1)) / x;
+        return pow_O_ln_n_rec( T(1)/x, -(n+1)) / x;
     } else {
-        return pow_O_ln_n_rec( 1.0/x, -n);
+        return pow_O_ln_n_rec( T(1)/x, -n);
     }
 }
 
-float eval(Matrix<float>& m, float x) { // polynomial horner's method
+inline float eval(const Matrix<float>& m, float x) { // polynomial horner's method
+    if (m.getRows() != 1) throw std::invalid_argument("Polynomial must be a row matrix.");
     float res = 0.0f;
-    for (int i = m.getCols() - 1; i >= 0; i--) {
+    for (size_t i = m.getCols(); i-- > 0;) {
         res = res * x + m.at(0, i);
     }
     return res;

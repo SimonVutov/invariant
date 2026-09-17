@@ -9,6 +9,10 @@
 #include <string>
 #include <algorithm>
 #include <typeinfo>
+#include <vector>
+#include <limits>
+#include <type_traits>
+#include <utility>
 
 namespace invariant {
 
@@ -16,89 +20,69 @@ template<typename T>
 class Matrix {
 private:
     size_t rows, cols;
-    T* data;
+    std::vector<T> data;
+    static size_t checked_size(size_t r, size_t c) {
+        if (c && r > std::vector<T>().max_size() / c)
+            throw std::length_error("Matrix dimensions exceed storage capacity.");
+        return r * c;
+    }
+    void require_finite() const {
+        for (const auto value : data)
+            if (!std::isfinite(value))
+                throw std::invalid_argument("Matrix contains non-finite values.");
+    }
 public:
-    // Default constructor
-    Matrix() : rows(0), cols(0), data(nullptr) {}
-    // Constructor
-    Matrix(size_t r, size_t c) : rows(r), cols(c) {
-        data = new T[rows * cols]();
-    }
-    // Constructor with initial value
-    Matrix(size_t r, size_t c, T initialValue) : rows(r), cols(c) {
-        data = new T[rows * cols];
-        for (size_t i = 0; i < rows * cols; ++i) {
-            data[i] = initialValue;
+    Matrix() : rows(0), cols(0) {}
+    Matrix(size_t r, size_t c) : rows(r), cols(c), data(checked_size(r, c), T{}) {}
+    Matrix(size_t r, size_t c, T value) : rows(r), cols(c), data(checked_size(r, c), value) {}
+    Matrix(size_t r, size_t c, T** array) : Matrix(r, c) {
+        if (r && c && !array) throw std::invalid_argument("Null matrix array.");
+        for (size_t i = 0; i < r && c; ++i) {
+            if (!array[i]) throw std::invalid_argument("Null matrix row.");
+            std::copy_n(array[i], c, data.begin() + i * c);
         }
     }
-    // Constructor with Array of Arrays
-    Matrix(size_t r, size_t c, T** array) : rows(r), cols(c) {
-        data = new T[rows * cols];
-        for (size_t i = 0; i < rows; ++i) {
-            for (size_t j = 0; j < cols; ++j) {
-                data[i * cols + j] = array[i][j];
-            }
+    Matrix(size_t r, size_t c, T minValue, T maxValue) : Matrix(r, c) {
+        if (!std::isfinite(minValue) || !std::isfinite(maxValue) || minValue > maxValue)
+            throw std::invalid_argument("Invalid random range.");
+        std::mt19937 gen(std::random_device{}());
+        if constexpr (std::is_integral_v<T>) {
+            std::uniform_int_distribution<T> dis(minValue, maxValue);
+            for (auto& value : data) value = dis(gen);
+        } else {
+            std::uniform_real_distribution<T> dis(minValue, maxValue);
+            for (auto& value : data) value = dis(gen);
         }
     }
-    // Constructor of random values in range
-    Matrix(size_t r, size_t c, T minValue, T maxValue) : rows(r), cols(c) {
-        data = new T[rows * cols];
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_real_distribution<> dis(minValue, maxValue);
-        for (size_t i = 0; i < rows * cols; ++i) {
-            data[i] = static_cast<T>(dis(gen));
-        }
-    }
-    // Copy constructor
-    Matrix(const Matrix& other) : rows(other.rows), cols(other.cols) {
-        data = new T[rows * cols];
-        for (size_t i = 0; i < rows * cols; ++i) {
-            data[i] = other.data[i];
-        }
-    }
-    // Copy assignment operator
+    Matrix(const Matrix&) = default;
     Matrix& operator=(const Matrix& other) {
         if (this != &other) {
-            delete[] data;
-            rows = other.rows;
-            cols = other.cols;
-            data = new T[rows * cols];
-            for (size_t i = 0; i < rows * cols; ++i) {
-                data[i] = other.data[i];
-            }
+            Matrix copy(other);
+            swap(copy);
         }
         return *this;
     }
-    // Move constructor
-    Matrix(Matrix&& other) noexcept : rows(other.rows), cols(other.cols), data(other.data) {
-        other.data = nullptr;
-        other.rows = 0;
-        other.cols = 0;
-    }
-    // Move assignment operator
+    Matrix(Matrix&& other) noexcept : Matrix() { swap(other); }
     Matrix& operator=(Matrix&& other) noexcept {
         if (this != &other) {
-            delete[] data;
-            rows = other.rows;
-            cols = other.cols;
-            data = other.data;
-            other.data = nullptr;
-            other.rows = 0;
-            other.cols = 0;
+            Matrix moved(std::move(other));
+            swap(moved);
         }
         return *this;
     }
-    // Destructor
-    ~Matrix() {
-        delete[] data;
+    void swap(Matrix& other) noexcept {
+        std::swap(rows, other.rows);
+        std::swap(cols, other.cols);
+        data.swap(other.data);
     }
     // Access element
     T& at(size_t r, size_t c) {
+        if (r >= rows || c >= cols) throw std::out_of_range("Matrix index out of bounds.");
         return data[r * cols + c];
     }
     // Const access element
     const T& at(size_t r, size_t c) const {
+        if (r >= rows || c >= cols) throw std::out_of_range("Matrix index out of bounds.");
         return data[r * cols + c];
     }
     // Getters for rows and columns
@@ -123,15 +107,12 @@ public:
             throw std::invalid_argument("Matrix dimensions do not match for multiplication.");
         }
         Matrix result(rows, other.cols);
-        for (size_t i = 0; i < rows; ++i) {
-            for (size_t j = 0; j < other.cols; ++j) {
-                T sum = T();
-                for (size_t k = 0; k < cols; ++k) {
-                    sum += at(i, k) * other.at(k, j);
-                }
-                result.at(i, j) = sum;
+        for (size_t i = 0; i < rows; ++i)
+            for (size_t k = 0; k < cols; ++k) {
+                const T value = data[i * cols + k];
+                for (size_t j = 0; j < other.cols; ++j)
+                    result.data[i * other.cols + j] += value * other.data[k * other.cols + j];
             }
-        }
         return result;
     }
     // Multiply by a scalar
@@ -173,62 +154,62 @@ public:
     }
     // Make column-stochastic, meaning the columns sum to 1
     void makeColumnStochastic() {
-        Matrix ones = Matrix(rows, 1, T(1));
-        Matrix colSums = (*this).transpose() * ones;
+        static_assert(std::is_floating_point_v<T>, "Normalization requires floating point.");
+        require_finite();
+        std::vector<T> sums(cols, T{});
         for (size_t j = 0; j < cols; ++j) {
-            T colSum = colSums.at(j, 0);
-            if (colSum == T()) {
-                throw std::invalid_argument("Column sum is zero, cannot make stochastic.");
-            }
             for (size_t i = 0; i < rows; ++i) {
-                at(i, j) /= colSum;
+                if (at(i, j) < T{}) throw std::invalid_argument("Stochastic entries must be nonnegative.");
+                sums[j] += at(i, j);
             }
+            if (!(sums[j] > T{}) || !std::isfinite(sums[j]))
+                throw std::invalid_argument("Column sum must be positive and finite.");
         }
-
-        *this = *this;
+        for (size_t j = 0; j < cols; ++j)
+            for (size_t i = 0; i < rows; ++i) at(i, j) /= sums[j];
     }
-    // Solve a linear system Ax = b using Gaussian elimination
+    // Gaussian elimination with scaled partial pivoting; supports multiple RHS columns.
     Matrix solve(const Matrix& b) const {
-        if (rows != cols || b.rows != rows || b.cols != 1) {
+        static_assert(std::is_floating_point_v<T>, "Solving requires floating point.");
+        if (!rows || rows != cols || b.rows != rows || !b.cols)
             throw std::invalid_argument("Invalid dimensions for solving linear system.");
-        }
-        Matrix A(*this);
-        Matrix x(b);
+        require_finite();
+        b.require_finite();
+        Matrix A(*this), x(b);
+        std::vector<T> scale(rows, T{});
         for (size_t i = 0; i < rows; ++i) {
-            // Pivoting
-            size_t maxRow = i;
+            for (size_t j = 0; j < cols; ++j) scale[i] = std::max(scale[i], std::abs(A.at(i, j)));
+            if (scale[i] == T{}) throw std::domain_error("Singular matrix.");
+        }
+        const T threshold = std::numeric_limits<T>::epsilon() * static_cast<T>(rows);
+        for (size_t i = 0; i < rows; ++i) {
+            size_t pivot = i;
+            for (size_t k = i + 1; k < rows; ++k)
+                if (std::abs(A.at(k, i)) / scale[k] > std::abs(A.at(pivot, i)) / scale[pivot]) pivot = k;
+            if (std::abs(A.at(pivot, i)) / scale[pivot] <= threshold)
+                throw std::domain_error("Singular or numerically rank-deficient matrix.");
+            for (size_t j = 0; j < cols; ++j) std::swap(A.at(i, j), A.at(pivot, j));
+            for (size_t j = 0; j < b.cols; ++j) std::swap(x.at(i, j), x.at(pivot, j));
+            std::swap(scale[i], scale[pivot]);
             for (size_t k = i + 1; k < rows; ++k) {
-                if (std::abs(A.at(k, i)) > std::abs(A.at(maxRow, i))) {
-                    maxRow = k;
-                }
-            }
-            for (size_t k = i; k < cols; ++k) {
-                std::swap(A.at(i, k), A.at(maxRow, k));
-            }
-            std::swap(x.at(i, 0), x.at(maxRow, 0));
-            // Elimination
-            for (size_t k = i + 1; k < rows; ++k) {
-                T factor = A.at(k, i) / A.at(i, i);
-                for (size_t j = i; j < cols; ++j) {
-                    A.at(k, j) -= factor * A.at(i, j);
-                }
-                x.at(k, 0) -= factor * x.at(i, 0);
+                const T factor = A.at(k, i) / A.at(i, i);
+                A.at(k, i) = T{};
+                for (size_t j = i + 1; j < cols; ++j) A.at(k, j) -= factor * A.at(i, j);
+                for (size_t j = 0; j < b.cols; ++j) x.at(k, j) -= factor * x.at(i, j);
             }
         }
-        // Back substitution
-        Matrix solution(rows, 1);
-        for (int i = rows - 1; i >= 0; --i) {
-            T sum = x.at(i, 0);
-            for (size_t j = i + 1; j < cols; ++j) {
-                sum -= A.at(i, j) * solution.at(j, 0);
+        for (size_t i = rows; i-- > 0;)
+            for (size_t k = 0; k < b.cols; ++k) {
+                for (size_t j = i + 1; j < cols; ++j) x.at(i, k) -= A.at(i, j) * x.at(j, k);
+                x.at(i, k) /= A.at(i, i);
             }
-            solution.at(i, 0) = sum / A.at(i, i);
-        }
-        return solution;
+        for (auto value : x.data)
+            if (!std::isfinite(value)) throw std::runtime_error("Non-finite linear solution.");
+        return x;
     }
 
     Matrix LinearFit(T* x_values, T* y_values, size_t n) {
-        if (n < 2) {
+        if (!x_values || !y_values || n < 2) {
             throw std::invalid_argument("Invalid input sizes for linear fit.");
         }
         Matrix<T> X(n, n);
@@ -259,41 +240,41 @@ public:
     // Iteratively solves by decomposing A = D + R, then x_{k+1} = D^{-1}(b - R*x_k)
     // Converges when A is strictly diagonally dominant
     Matrix solve_jacobi(const Matrix& b, size_t maxIterations = 10000, double tolerance = 1e-10) const {
-        if (rows != cols || b.rows != rows || b.cols != 1) {
+        static_assert(std::is_floating_point_v<T>, "Solving requires floating point.");
+        if (!rows || rows != cols || b.rows != rows || b.cols != 1)
             throw std::invalid_argument("Invalid dimensions for solving linear system.");
-        }
-        // Check for zero diagonal elements
-        for (size_t i = 0; i < rows; ++i) {
-            if (std::abs(at(i, i)) < 1e-15) {
-                throw std::invalid_argument("Jacobi method requires non-zero diagonal elements.");
-            }
-        }
-        // Initial guess: x = 0
-        Matrix x(rows, 1, T(0));
-        Matrix x_new(rows, 1, T(0));
-
+        if (!maxIterations || !std::isfinite(tolerance) || tolerance <= 0)
+            throw std::invalid_argument("Jacobi requires positive iterations and finite positive tolerance.");
+        require_finite();
+        b.require_finite();
+        for (size_t i = 0; i < rows; ++i)
+            if (at(i, i) == T{}) throw std::invalid_argument("Jacobi requires nonzero diagonal.");
+        Matrix x(rows, 1), next(rows, 1);
+        long double bnorm = 0;
+        for (auto value : b.data) bnorm = std::hypot(bnorm, static_cast<long double>(value));
         for (size_t iter = 0; iter < maxIterations; ++iter) {
             for (size_t i = 0; i < rows; ++i) {
-                T sigma = T(0);
-                for (size_t j = 0; j < cols; ++j) {
-                    if (j != i) {
-                        sigma += at(i, j) * x.at(j, 0);
-                    }
-                }
-                x_new.at(i, 0) = (b.at(i, 0) - sigma) / at(i, i);
+                T sigma = T{};
+                for (size_t j = 0; j < cols; ++j)
+                    if (j != i) sigma += at(i, j) * x.at(j, 0);
+                next.at(i, 0) = (b.at(i, 0) - sigma) / at(i, i);
+                if (!std::isfinite(next.at(i, 0))) throw std::runtime_error("Jacobi diverged.");
             }
-            // Check convergence using two-norm of difference
-            double diff = x_new.two_norm_euclidian_length_difference(x);
-            x = x_new;
-            if (diff < tolerance) {
-                return x;
+            x.swap(next);
+            long double residual = 0;
+            for (size_t i = 0; i < rows; ++i) {
+                long double value = -static_cast<long double>(b.at(i, 0));
+                for (size_t j = 0; j < cols; ++j) value += static_cast<long double>(at(i, j)) * x.at(j, 0);
+                residual = std::hypot(residual, value);
             }
+            if (residual <= tolerance * std::max(1.0L, bnorm)) return x;
         }
-        return x;
+        throw std::runtime_error("Jacobi did not converge within maxIterations.");
     }
 
     // Non-mutable power function using exponentiation by squaring
-    Matrix<T> power(int exponent) {
+    Matrix<T> power(int exponent) const {
+        if (exponent < 0) throw std::invalid_argument("Negative matrix powers are unsupported.");
         if (rows != cols) {
             throw std::invalid_argument("Matrix must be square to raise to a power.");
         }
@@ -354,9 +335,9 @@ public:
         double sum = 0.0;
         for (size_t i = 0; i < rows * cols; ++i) {
             double diff = static_cast<double>(data[i]) - static_cast<double>(other.data[i]);
-            sum += diff * diff;
+            sum = std::hypot(sum, diff);
         }
-        return std::sqrt(sum);
+        return sum;
     }
 
     double sum() const {

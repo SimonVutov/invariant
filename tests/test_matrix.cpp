@@ -7,7 +7,7 @@
 
 #include <iostream>
 #include <cmath>
-#include <cassert>
+#include "check.hpp"
 #include <invariant/invariant.hpp>
 
 using invariant::Matrix;
@@ -104,23 +104,23 @@ int main() {
 void testMatrixConstruction() {
     // Test default constructor
     Matrix<double> m1;
-    assert(m1.getRows() == 0);
-    assert(m1.getCols() == 0);
+    CHECK(m1.getRows() == 0);
+    CHECK(m1.getCols() == 0);
     
     // Test size constructor
     Matrix<double> m2(3, 4);
-    assert(m2.getRows() == 3);
-    assert(m2.getCols() == 4);
+    CHECK(m2.getRows() == 3);
+    CHECK(m2.getCols() == 4);
     
     // Test constructor with initial value
     Matrix<double> m3(2, 2, 5.0);
-    assert(m3.at(0, 0) == 5.0);
-    assert(m3.at(1, 1) == 5.0);
+    CHECK(m3.at(0, 0) == 5.0);
+    CHECK(m3.at(1, 1) == 5.0);
     
     // Test copy constructor
     Matrix<double> m4(m3);
-    assert(m4.at(0, 0) == 5.0);
-    assert(m4.getRows() == 2);
+    CHECK(m4.at(0, 0) == 5.0);
+    CHECK(m4.getRows() == 2);
 }
 
 /**
@@ -132,13 +132,13 @@ void testMatrixOperations() {
     
     // Test addition
     Matrix<double> C = A.Add(B);
-    assert(std::abs(C.at(0, 0) - 5.0) < 1e-10);
-    assert(std::abs(C.at(1, 1) - 5.0) < 1e-10);
+    CHECK(std::abs(C.at(0, 0) - 5.0) < 1e-10);
+    CHECK(std::abs(C.at(1, 1) - 5.0) < 1e-10);
     
     // Test subtraction
     Matrix<double> D = A.Subtract(B);
-    assert(std::abs(D.at(0, 0) - 1.0) < 1e-10);
-    assert(std::abs(D.at(1, 1) - 1.0) < 1e-10);
+    CHECK(std::abs(D.at(0, 0) - 1.0) < 1e-10);
+    CHECK(std::abs(D.at(1, 1) - 1.0) < 1e-10);
 }
 
 /**
@@ -158,15 +158,15 @@ void testMatrixMultiplication() {
     
     // A * B = [[4, 4], [10, 8]]
     Matrix<double> C = A * B;
-    assert(std::abs(C.at(0, 0) - 4.0) < 1e-10);
-    assert(std::abs(C.at(0, 1) - 4.0) < 1e-10);
-    assert(std::abs(C.at(1, 0) - 10.0) < 1e-10);
-    assert(std::abs(C.at(1, 1) - 8.0) < 1e-10);
+    CHECK(std::abs(C.at(0, 0) - 4.0) < 1e-10);
+    CHECK(std::abs(C.at(0, 1) - 4.0) < 1e-10);
+    CHECK(std::abs(C.at(1, 0) - 10.0) < 1e-10);
+    CHECK(std::abs(C.at(1, 1) - 8.0) < 1e-10);
     
     // Scalar multiplication
     Matrix<double> D = A * 2.0;
-    assert(std::abs(D.at(0, 0) - 2.0) < 1e-10);
-    assert(std::abs(D.at(1, 1) - 8.0) < 1e-10);
+    CHECK(std::abs(D.at(0, 0) - 2.0) < 1e-10);
+    CHECK(std::abs(D.at(1, 1) - 8.0) < 1e-10);
     
     // Cleanup
     delete[] data_a[0]; delete[] data_a[1]; delete[] data_a;
@@ -185,13 +185,13 @@ void testMatrixTranspose() {
     Matrix<double> At = A.transpose();
     
     // Check dimensions swapped
-    assert(At.getRows() == 3);
-    assert(At.getCols() == 2);
+    CHECK(At.getRows() == 3);
+    CHECK(At.getCols() == 2);
     
     // Check values transposed
-    assert(std::abs(At.at(0, 0) - 1.0) < 1e-10);
-    assert(std::abs(At.at(1, 0) - 2.0) < 1e-10);
-    assert(std::abs(At.at(2, 1) - 6.0) < 1e-10);
+    CHECK(std::abs(At.at(0, 0) - 1.0) < 1e-10);
+    CHECK(std::abs(At.at(1, 0) - 2.0) < 1e-10);
+    CHECK(std::abs(At.at(2, 1) - 6.0) < 1e-10);
     
     // Cleanup
     delete[] data[0]; delete[] data[1]; delete[] data;
@@ -214,12 +214,12 @@ void testColumnStochastic() {
         for (size_t i = 0; i < A.getRows(); ++i) {
             sum += A.at(i, j);
         }
-        assert(std::abs(sum - 1.0) < 1e-10);
+        CHECK(std::abs(sum - 1.0) < 1e-10);
     }
     
     // Check specific values: column 0 should be [1/5, 4/5]
-    assert(std::abs(A.at(0, 0) - 0.2) < 1e-10);
-    assert(std::abs(A.at(1, 0) - 0.8) < 1e-10);
+    CHECK(std::abs(A.at(0, 0) - 0.2) < 1e-10);
+    CHECK(std::abs(A.at(1, 0) - 0.8) < 1e-10);
     
     // Cleanup
     delete[] data[0]; delete[] data[1]; delete[] data;
@@ -243,13 +243,13 @@ void testLinearSystemSolver() {
     Matrix<double> x = A.solve(b);
     
     // Check solution
-    assert(std::abs(x.at(0, 0) - 7.111111) < 1e-5);
-    assert(std::abs(x.at(1, 0) - (-3.222222)) < 1e-5);
+    CHECK(std::abs(x.at(0, 0) - 7.111111) < 1e-5);
+    CHECK(std::abs(x.at(1, 0) - (-3.222222)) < 1e-5);
     
     // Verify: A*x should equal b
     Matrix<double> verification = A * x;
-    assert(std::abs(verification.at(0, 0) - 11.0) < 1e-5);
-    assert(std::abs(verification.at(1, 0) - 13.0) < 1e-5);
+    CHECK(std::abs(verification.at(0, 0) - 11.0) < 1e-5);
+    CHECK(std::abs(verification.at(1, 0) - 13.0) < 1e-5);
     
     // Cleanup
     delete[] data[0]; delete[] data[1]; delete[] data;
@@ -268,17 +268,17 @@ void testMatrixPower() {
     
     Matrix<double> A2 = A.power(2);
     
-    assert(std::abs(A2.at(0, 0) - 7.0) < 1e-10);
-    assert(std::abs(A2.at(0, 1) - 10.0) < 1e-10);
-    assert(std::abs(A2.at(1, 0) - 15.0) < 1e-10);
-    assert(std::abs(A2.at(1, 1) - 22.0) < 1e-10);
+    CHECK(std::abs(A2.at(0, 0) - 7.0) < 1e-10);
+    CHECK(std::abs(A2.at(0, 1) - 10.0) < 1e-10);
+    CHECK(std::abs(A2.at(1, 0) - 15.0) < 1e-10);
+    CHECK(std::abs(A2.at(1, 1) - 22.0) < 1e-10);
     
     // Test A^0 = Identity
     Matrix<double> A0 = A.power(0);
-    assert(std::abs(A0.at(0, 0) - 1.0) < 1e-10);
-    assert(std::abs(A0.at(1, 1) - 1.0) < 1e-10);
-    assert(std::abs(A0.at(0, 1)) < 1e-10);
-    assert(std::abs(A0.at(1, 0)) < 1e-10);
+    CHECK(std::abs(A0.at(0, 0) - 1.0) < 1e-10);
+    CHECK(std::abs(A0.at(1, 1) - 1.0) < 1e-10);
+    CHECK(std::abs(A0.at(0, 1)) < 1e-10);
+    CHECK(std::abs(A0.at(1, 0)) < 1e-10);
     
     // Cleanup
     delete[] data[0]; delete[] data[1]; delete[] data;
