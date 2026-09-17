@@ -8,9 +8,9 @@
 #include "Matrix.hpp"
 #include "Polynomial.hpp"
 
-// Add a version macro
-// #define INVARIANT_VERSION_MAJOR 1
-// #define INVARIANT_VERSION_MINOR 0
-// #define INVARIANT_VERSION_PATCH 0
+#define INVARIANT_VERSION_MAJOR 0
+#define INVARIANT_VERSION_MINOR 1
+#define INVARIANT_VERSION_PATCH 0
+#define INVARIANT_VERSION "0.1.0"
 
 #endif // INVARIANT_HPP

@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.20)
+project(invariant_consumer LANGUAGES CXX)
+find_package(invariant 0.1 CONFIG REQUIRED)
+add_executable(consumer main.cpp other.cpp)
+target_link_libraries(consumer PRIVATE invariant::invariant)
+enable_testing()
+add_test(NAME InstalledConsumer COMMAND consumer)

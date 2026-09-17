@@ -29,6 +29,23 @@ int main() {
     copied = std::move(moved); CHECK(moved.getRows()==0);
     throws<std::invalid_argument>([&]{ a.power(-1); });
     CHECK(ca.power(0).at(0,0)==1);
+    for (size_t r : {size_t(0),size_t(1),size_t(3)})
+        for (size_t inner : {size_t(0),size_t(2),size_t(5)})
+            for (size_t c : {size_t(0),size_t(1),size_t(4)}) {
+                Matrix<double> left(r,inner), right(inner,c);
+                for (size_t i=0;i<r;++i) for (size_t k=0;k<inner;++k) left.at(i,k)=double(i)-double(k);
+                for (size_t k=0;k<inner;++k) for (size_t j=0;j<c;++j) right.at(k,j)=double(k)+double(j);
+                auto product = left*right;
+                CHECK(product.getRows()==r && product.getCols()==c);
+                for (size_t i=0;i<r;++i) for (size_t j=0;j<c;++j) {
+                    double reference=0;
+                    for (size_t k=0;k<inner;++k) reference+=left.at(i,k)*right.at(k,j);
+                    CHECK(product.at(i,j)==reference);
+                }
+            }
+    Matrix<float> fa(1,1,2.0f), fb(1,1,3.0f);
+    CHECK(fa.solve(fb).at(0,0)==1.5f);
+    CHECK(fa.solve_jacobi(fb).at(0,0)==1.5f);
     Matrix<double> rhs(2,1,1.0);
     throws<std::domain_error>([&]{ a.solve(rhs); });
     Matrix<double> zero(2,2);
