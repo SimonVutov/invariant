@@ -41,3 +41,9 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/invariantConfig.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/invariantConfigVersion.cmake"
     DESTINATION "${invariant_cmake_dir}")
 install(FILES LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/invariant")
+
+option(BUILD_BENCHMARKS "Build deterministic Invariant microbenchmarks" OFF)
+if(BUILD_BENCHMARKS)
+    add_executable(matrix_benchmark benchmarks/matrix_benchmark.cpp)
+    target_link_libraries(matrix_benchmark PRIVATE invariant::invariant)
+endif()

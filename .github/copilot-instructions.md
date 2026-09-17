@@ -48,3 +48,13 @@ This repository is a header-only C++17 library focused on Matrix, Vector, and Po
 ---
 
 For major changes, update this file to keep AI agents productive.
+
+## Release hardening (0.1.0)
+
+- Matrix storage is a checked row-major `std::vector`; preserve checked public access.
+- Solvers require floating-point types and report invalid/singular/nonconvergent inputs.
+- Use `tests/check.hpp` for checks that remain active in Release, not `assert`.
+- CMake 3.20+ exports `invariant::invariant`; CTest verifies a relocated installation.
+- Run examples and Debug/Release/sanitizer checks when changing core numerics.
+- Optional benchmarks are enabled with `BUILD_BENCHMARKS=ON`.
+- Keep neural-network layers in CPPNN.

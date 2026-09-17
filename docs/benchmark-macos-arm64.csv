@@ -1,0 +1,6 @@
+operation,rows,inner,cols,median_ms,relative_error
+matmul,32,32,32,0.009625,0
+matmul,128,128,128,0.6175,0
+matmul,256,256,256,2.643375,0
+dense_batch_matmul,128,784,32,0.661291,
+solve,128,128,4,0.145958,7.32748778e-16
