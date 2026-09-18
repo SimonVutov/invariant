@@ -76,8 +76,8 @@ PYBIND11_MODULE(_core,m) {
     bind_matrix<float>(m,"MatrixFloat");
     m.def("polyval",[](const Array<double>& coefficients,double x){
         if (coefficients.ndim()!=1 || coefficients.size()==0) throw std::invalid_argument("Expected nonempty 1D coefficients.");
-        double value=0;
-        for(py::ssize_t i=coefficients.size();i-- >0;) value=value*x+coefficients.data()[i];
-        return value;
+        if (static_cast<size_t>(coefficients.size()-1) > std::numeric_limits<unsigned int>::max())
+            throw std::length_error("Polynomial degree is too large.");
+        return invariant::polyval_horner(coefficients.data(), static_cast<unsigned int>(coefficients.size()-1), x);
     });
 }

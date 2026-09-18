@@ -23,7 +23,7 @@ wheel.packages = ["python/invariant"]
 cmake.build-type = "Release"
 cmake.args = ["-DBUILD_PYTHON=ON", "-DBUILD_TESTS=OFF", "-DBUILD_EXAMPLES=OFF", "-DBUILD_BENCHMARKS=OFF"]
 install.components = ["python"]
-sdist.exclude = ["build", ".venv", "docs", ".github"]
+sdist.exclude = ["build", ".venv", ".github"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
