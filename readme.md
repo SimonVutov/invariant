@@ -141,5 +141,4 @@ are machine-specific; neither benchmark establishes a universal speed advantage.
 Neural-network examples live in [CPPNN](https://github.com/SimonVutov/CPPNN), including
 a CIFAR-10 example using these bindings. Invariant implements numerical primitives.
 
-MIT licensed; see [LICENSE](LICENSE). This project originated from Waterloo ECE115
-and ECE204 material, with original code adapted from Douglas Wilhelm Harder's lessons.
+MIT licensed; see [LICENSE](LICENSE). Inspired by ECE 204.
