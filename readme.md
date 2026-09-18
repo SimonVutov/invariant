@@ -3,6 +3,16 @@
 Header-only C++17 dense matrices and numerical methods, with NumPy-friendly
 Python bindings. Version **0.1.0**. No BLAS or neural-network framework required.
 
+## Get the code
+
+```sh
+git clone https://github.com/SimonVutov/invariant.git
+cd invariant
+```
+
+Until the release work is merged, use `git checkout codex/release-0.1-hardening`
+after that branch has been pushed. The commands below run from this repository.
+
 ## Python
 
 Requires Python 3.10+, a C++17 compiler, and CMake 3.20+ for source builds.
@@ -69,7 +79,14 @@ Installed consumers use `find_package(invariant 0.1 CONFIG REQUIRED)` with
 Build options: `BUILD_TESTS`, `BUILD_EXAMPLES` (on for standalone builds),
 `BUILD_BENCHMARKS`, `BUILD_PYTHON` (off). C++ use has no Python dependency.
 Examples: `sample_usage`, `linear_fit`, `jacobi_interpolation`, `checked_solve`
-under `build/examples` (or its `Release` subdirectory).
+under `build/examples` (or its `Release` subdirectory):
+
+```sh
+./build/examples/sample_usage
+./build/examples/linear_fit
+./build/examples/jacobi_interpolation
+./build/examples/checked_solve
+```
 
 ## Numerical contracts
 
@@ -108,8 +125,15 @@ python -m pip install build
 python -m build  # source archive and platform-specific wheel in dist/
 ```
 
-For C++ timing, enable `BUILD_BENCHMARKS=ON` in Release and run
-`matrix_benchmark`. It uses seed 42, one warm-up, and seven repetitions, with
+For C++ timing:
+
+```sh
+cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release -DBUILD_BENCHMARKS=ON
+cmake --build build/release --config Release --parallel
+./build/release/matrix_benchmark
+```
+
+The benchmark It uses seed 42, one warm-up, and seven repetitions, with
 allocation included and correctness checks outside timing. Python benchmarks
 include conversion copies. [Sample C++ measurements](docs/benchmark-macos-arm64.csv)
 are machine-specific; neither benchmark establishes a universal speed advantage.
