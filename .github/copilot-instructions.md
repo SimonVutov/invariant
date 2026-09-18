@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This repository is a header-only C++17 library focused on Matrix, Vector, and Polynomial operations, inspired by University of Waterloo ECE115 (Linear Algebra) and ECE204 (Numerical Methods) courses. Much of the code is adapted from course material by Douglas Wilhelm Harder.
+This repository is a header-only C++17 library focused on Matrix, Vector, and Polynomial operations, inspired by ECE 204.
 
 ## Key Architectural Concepts
 

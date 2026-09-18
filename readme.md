@@ -10,8 +10,8 @@ git clone https://github.com/SimonVutov/invariant.git
 cd invariant
 ```
 
-Until the release work is merged, use `git checkout codex/release-0.1-hardening`
-after that branch has been pushed. The commands below run from this repository.
+Until the release work is merged, use `git checkout codex/release-0.1-hardening`.
+The commands below run from this repository.
 
 ## Python
 
