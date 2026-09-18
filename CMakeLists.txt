@@ -47,3 +47,13 @@ if(BUILD_BENCHMARKS)
     add_executable(matrix_benchmark benchmarks/matrix_benchmark.cpp)
     target_link_libraries(matrix_benchmark PRIVATE invariant::invariant)
 endif()
+
+option(BUILD_PYTHON "Build Python bindings" OFF)
+if(BUILD_PYTHON)
+    find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+    find_package(pybind11 CONFIG REQUIRED)
+    pybind11_add_module(_core bindings/module.cpp)
+    target_link_libraries(_core PRIVATE invariant::invariant)
+    install(TARGETS _core LIBRARY DESTINATION invariant COMPONENT python
+        RUNTIME DESTINATION invariant COMPONENT python)
+endif()

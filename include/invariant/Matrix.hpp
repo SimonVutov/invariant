@@ -208,6 +208,53 @@ public:
         return x;
     }
 
+    // Full-column-rank least squares using Householder QR (m >= n).
+    Matrix least_squares(const Matrix& b) const {
+        static_assert(std::is_floating_point_v<T>, "Least squares requires floating point.");
+        if (!cols || rows < cols || b.rows != rows || !b.cols)
+            throw std::invalid_argument("Least squares requires m >= n > 0 and matching RHS rows.");
+        require_finite();
+        b.require_finite();
+        Matrix a(*this), rhs(b);
+        std::vector<T> v(rows);
+        const T threshold = std::numeric_limits<T>::epsilon() * static_cast<T>(rows);
+        for (size_t k = 0; k < cols; ++k) {
+            T original_norm = T{}, norm = T{};
+            for (size_t i = 0; i < rows; ++i) original_norm = std::hypot(original_norm, at(i, k));
+            for (size_t i = k; i < rows; ++i) norm = std::hypot(norm, a.at(i, k));
+            if (!std::isfinite(norm) || !std::isfinite(original_norm))
+                throw std::runtime_error("Least squares overflow.");
+            if (original_norm == T{} || norm / original_norm <= threshold)
+                throw std::domain_error("Rank-deficient least squares matrix.");
+            const T sign = a.at(k, k) >= 0 ? T(1) : T(-1);
+            for (size_t i = k; i < rows; ++i) v[i] = a.at(i, k) / norm;
+            v[k] += sign;
+            T vnorm = T{};
+            for (size_t i = k; i < rows; ++i) vnorm = std::hypot(vnorm, v[i]);
+            for (size_t i = k; i < rows; ++i) v[i] /= vnorm;
+            for (size_t j = k; j < cols; ++j) {
+                T dot = T{};
+                for (size_t i = k; i < rows; ++i) dot += v[i] * a.at(i, j);
+                for (size_t i = k; i < rows; ++i) a.at(i, j) -= T(2) * v[i] * dot;
+            }
+            a.at(k, k) = -sign * norm;
+            for (size_t j = 0; j < b.cols; ++j) {
+                T dot = T{};
+                for (size_t i = k; i < rows; ++i) dot += v[i] * rhs.at(i, j);
+                for (size_t i = k; i < rows; ++i) rhs.at(i, j) -= T(2) * v[i] * dot;
+            }
+        }
+        Matrix result(cols, b.cols);
+        for (size_t i = cols; i-- > 0;)
+            for (size_t j = 0; j < b.cols; ++j) {
+                T value = rhs.at(i, j);
+                for (size_t k = i + 1; k < cols; ++k) value -= a.at(i, k) * result.at(k, j);
+                result.at(i, j) = value / a.at(i, i);
+                if (!std::isfinite(result.at(i, j))) throw std::runtime_error("Non-finite least squares solution.");
+            }
+        return result;
+    }
+
     Matrix LinearFit(T* x_values, T* y_values, size_t n) {
         if (!x_values || !y_values || n < 2) {
             throw std::invalid_argument("Invalid input sizes for linear fit.");

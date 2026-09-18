@@ -1,39 +1,102 @@
 # Invariant
 
-Invariant is a dependency-free, header-only C++17 library for dense matrices and
-polynomial evaluation. The source is versioned **0.1.0**; a published release/tag
-is a separate step. It is intended for small numerical programs and learning,
-with explicit errors for invalid operations.
+Header-only C++17 dense matrices and numerical methods, with NumPy-friendly
+Python bindings. Version **0.1.0**. No BLAS or neural-network framework required.
 
-The project began with linear algebra and numerical methods from Waterloo
-ECE115 and ECE204. Original implementations were adapted from Douglas Wilhelm
-Harder's lessons. See [LICENSE](LICENSE).
+## Python
 
-## Build and test
-
-Requires a C++17 compiler and CMake 3.20 or newer. Header-only consumers do not
-need CMake or any external package.
+Requires Python 3.10+, a C++17 compiler, and CMake 3.20+ for source builds.
 
 ```sh
-git clone https://github.com/SimonVutov/invariant.git
-cd invariant
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python -m pip install '.[test]'
+python -m pytest
+python examples/python/matrix_basics.py
+python examples/python/linear_regression.py
+python examples/python/benchmark.py --size 128
+```
+
+The distribution is named `invariant-numerics`; import it as `invariant`.
+Installation above uses this checkout; no PyPI publication is assumed.
+
+```python
+import invariant as iv
+
+x = iv.solve([[4., 1.], [1., 3.]], [1., 2.])
+coefficients = iv.least_squares([[1., 0.], [1., 1.], [1., 2.]], [1., 3., 5.])
+a = iv.Matrix([[1., 2.], [3., 4.]])
+print(x, coefficients, (a @ a).numpy())
+```
+
+`matmul`, `solve`, `least_squares`, and `solve_jacobi` execute C++ kernels.
+Array functions return float32 only when both inputs are float32, otherwise
+float64; complex/object arrays are rejected. Solvers accept a 1D RHS and preserve
+its dimensionality. Matrix multiplication requires two 2D arrays.
+
+`Matrix` stores float64; `MatrixFloat` stores float32. They support `[row, col]`
+(including negative indices), `@`, `+`, `-`, scalar `*`, `.T`, `.solve(b)`,
+`.least_squares(b)`, `.solve_jacobi(b)`, `.power(n)`, `.sum()`, `.reciprocal()`,
+`.difference_norm(b)`, and `.make_column_stochastic()`.
+Construction and `.numpy()` copy: NumPy mutations never alias C++ storage.
+Array functions release the GIL during computation on their owned copies.
+`polyval([a, b, c], x)` evaluates `a + b*x + c*x*x`.
+
+## C++
+
+```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 ctest --test-dir build -C Release --output-on-failure
+cmake --install build --config Release --prefix "$HOME/.local"
 ```
 
-Tests remain active in Release builds. They cover matrix operations, ownership,
-rectangular and empty multiplication, invalid inputs, singular and scaled
-systems, generated systems with known solutions, Jacobi convergence and failure,
-polynomials, linking multiple translation units, all examples, and an installed
-consumer. The installation test moves the installed package before consuming it.
+```cpp
+#include <invariant/invariant.hpp>
+int main() {
+    invariant::Matrix<double> a(2, 2), b(2, 1);
+    a.at(0, 0)=4; a.at(0, 1)=1; a.at(1, 0)=1; a.at(1, 1)=3;
+    b.at(0, 0)=1; b.at(1, 0)=2;
+    a.solve(b).print();
+}
+```
 
-The CI workflow defines Debug/Release checks on Linux, macOS, and Windows, plus
-AddressSanitizer/UndefinedBehaviorSanitizer on Linux. Local verification results
-are in [CHANGELOG.md](CHANGELOG.md); configured CI is not a claim that remote jobs
-have already run.
+Compile with `c++ -std=c++17 -Iinclude main.cpp -o app`, copy the headers, or use
+CMake: `add_subdirectory(external/invariant)` and link `invariant::invariant`.
+Installed consumers use `find_package(invariant 0.1 CONFIG REQUIRED)` with
+`-DCMAKE_PREFIX_PATH="$HOME/.local"`.
 
-For a local sanitizer build with Clang or GCC:
+Build options: `BUILD_TESTS`, `BUILD_EXAMPLES` (on for standalone builds),
+`BUILD_BENCHMARKS`, `BUILD_PYTHON` (off). C++ use has no Python dependency.
+Examples: `sample_usage`, `linear_fit`, `jacobi_interpolation`, `checked_solve`
+under `build/examples` (or its `Release` subdirectory).
+
+## Numerical contracts
+
+- Solving and normalization require floating-point matrices. Indices and shapes
+  are checked; empty matrices are supported except by solvers.
+- `solve` uses scaled partial pivoting and accepts multiple RHS columns. A scaled
+  pivot at most `epsilon(T)*rows` is rejected as numerically rank deficient.
+- `least_squares` uses Householder QR, requires full column rank and rows ≥ columns,
+  and supports multiple RHS columns. It does not compute a pseudoinverse.
+- Jacobi stops at `||A*x-b||₂ <= tolerance*max(1, ||b||₂)`; iteration exhaustion
+  throws. Default: 10,000 iterations and tolerance 1e-10 (choose a looser tolerance
+  for float32). Ill-conditioned problems still require care with scaling/residuals.
+- Invalid arguments/non-finite solver inputs throw `invalid_argument`; singular or
+  rank-deficient systems throw `domain_error`; divergence throws `runtime_error`.
+  Python maps these to `ValueError`, `ValueError`, and `RuntimeError` respectively.
+  Bad indexing raises `out_of_range` / `IndexError`.
+- Matrix powers require nonnegative exponents. Stochastic normalization validates
+  nonnegative finite entries and positive column sums before modifying anything.
+- Legacy C++ names `Add`, `Subtract`, and `LinearFit` remain. `LinearFit` performs
+  polynomial interpolation, not least squares. Pointer APIs require valid storage
+  of the declared size; integer arithmetic follows ordinary C++ overflow/division rules.
+
+## Validation and release builds
+
+Tests cover numerical/reference parity, invalid inputs, copy ownership, header
+linking, examples, and a relocated CMake installation. CI runs C++ and Python
+checks on Linux, macOS, and Windows, with a separate sanitizer job.
 
 ```sh
 cmake -S . -B build/sanitized -DCMAKE_BUILD_TYPE=Debug \
@@ -41,140 +104,18 @@ cmake -S . -B build/sanitized -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
 cmake --build build/sanitized --parallel
 ctest --test-dir build/sanitized --output-on-failure
+python -m pip install build
+python -m build  # source archive and platform-specific wheel in dist/
 ```
 
-## Use from C++
+For C++ timing, enable `BUILD_BENCHMARKS=ON` in Release and run
+`matrix_benchmark`. It uses seed 42, one warm-up, and seven repetitions, with
+allocation included and correctness checks outside timing. Python benchmarks
+include conversion copies. [Sample C++ measurements](docs/benchmark-macos-arm64.csv)
+are machine-specific; neither benchmark establishes a universal speed advantage.
 
-```cpp
-#include <invariant/invariant.hpp>
-#include <iostream>
+Neural-network examples live in [CPPNN](https://github.com/SimonVutov/CPPNN), including
+a CIFAR-10 example using these bindings. Invariant implements numerical primitives.
 
-int main() {
-    invariant::Matrix<double> a(2, 2), b(2, 1);
-    a.at(0, 0) = 4; a.at(0, 1) = 1;
-    a.at(1, 0) = 1; a.at(1, 1) = 3;
-    b.at(0, 0) = 1; b.at(1, 0) = 2;
-    const auto x = a.solve(b);
-    x.print(); // approximately 0.0909091, 0.636364
-    std::cout << (a * x).two_norm_euclidian_length_difference(b) << '\n';
-}
-```
-
-Compile directly with `c++ -std=c++17 -Iinclude your_program.cpp -o your_program`.
-
-### CMake dependency
-
-Use a checkout as a subdirectory:
-
-```cmake
-add_subdirectory(external/invariant)
-add_executable(your_app main.cpp)
-target_link_libraries(your_app PRIVATE invariant::invariant)
-```
-
-Or install to a user-owned prefix:
-
-```sh
-cmake --install build --config Release --prefix "$HOME/.local"
-```
-
-Then in the consuming project:
-
-```cmake
-find_package(invariant 0.1 CONFIG REQUIRED)
-add_executable(your_app main.cpp)
-target_link_libraries(your_app PRIVATE invariant::invariant)
-```
-
-Configure that project with `-DCMAKE_PREFIX_PATH="$HOME/.local"`. The package
-exports its include directories and C++17 requirement. You can also copy the
-`include/invariant` directory directly.
-
-Build options are `BUILD_TESTS`, `BUILD_EXAMPLES`, and `BUILD_BENCHMARKS`.
-Tests/examples default on for standalone builds and off for subdirectory use;
-benchmarks default off. The original option names and unnamespaced `invariant`
-target remain available for compatibility.
-
-## API and numerical behavior
-
-Matrices own contiguous row-major storage. Copies are independent; moves leave
-the source as a valid 0×0 matrix. `at(row, col)` checks both dimensions. Zero-sized
-matrices are valid for storage, transpose, and multiplication; solvers require
-nonempty square matrices. The pointer constructor copies its input; callers must
-provide the declared number of readable rows and elements.
-
-| Operation | Interface and behavior |
-| --- | --- |
-| Dimensions | `getRows()`, `getCols()`, `dim()` |
-| Arithmetic | `a * b`, `a * scalar`, `a.Add(b)`, `a.Subtract(b)`, `transpose()` |
-| Elementwise reciprocal | `reciprocal()`; rejects zero entries; integer matrices retain integer division semantics |
-| Linear solve | `a.solve(b)`; scaled partial pivoting, one or more RHS columns |
-| Iterative solve | `a.solve_jacobi(b, maxIterations=10000, tolerance=1e-10)`; one RHS column |
-| Powers | `a.power(nonnegative_integer)`; exponent zero produces the identity |
-| Column normalization | `makeColumnStochastic()`; requires nonnegative finite entries and positive finite column sums |
-| Difference norm | `two_norm_euclidian_length_difference(b)`; Frobenius norm, with overflow-resistant accumulation |
-| Reduction | `sum()` returns `double` |
-| Interpolation | Legacy `LinearFit(x, y, n)` returns ascending coefficients of a degree-at-most `n-1` interpolating polynomial and prints it |
-| Polynomial evaluation | `polyval_horner(coeffs, degree, x)`, `polyval_horner2`, `polyval_O_n_ln_n_rec`; ascending coefficients |
-| Scalar powers | `pow_O_ln_n_iter(x, n)`, `pow_O_ln_n_rec(x, n)` |
-
-`solve`, `solve_jacobi`, and stochastic normalization require floating-point
-matrices at compile time. Use `Matrix<float>` or `Matrix<double>`. Integer
-arithmetic otherwise follows C++ rules, including overflow limitations.
-
-- Bad shapes, non-finite solver inputs, invalid iteration controls, negative
-  matrix powers, and invalid normalization inputs throw `std::invalid_argument`.
-- Invalid indices throw `std::out_of_range`; impossible allocation dimensions
-  throw `std::length_error`. Ordinary allocation failure can throw `std::bad_alloc`.
-- `solve` throws `std::domain_error` for a zero row or a pivot whose magnitude,
-  divided by its original row scale, is at most `epsilon(T) * rows`. This is a
-  numerical rank test, not a condition-number estimate. Ill-conditioned systems
-  may still yield inaccurate answers: inspect the residual and input scaling.
-- Jacobi checks `||A*x-b||₂ <= tolerance * max(1, ||b||₂)`. Strict diagonal
-  dominance is a useful sufficient convergence condition. It throws
-  `std::runtime_error` on non-finite iterates or exhausted iterations; it never
-  silently returns an unconverged result. A non-finite direct solution also
-  throws `std::runtime_error`.
-- Column normalization validates every column before changing any entries.
-- Negative scalar powers require a nonzero floating-point base. Negative powers
-  of integer bases throw `std::domain_error` to avoid silent truncation.
-
-Polynomial pointer APIs require at least `degree + 1` readable coefficients;
-null pointers are rejected. `eval` is a legacy helper for a one-row
-`Matrix<float>`. `LinearFit` is polynomial interpolation, despite its historical
-name; it is not a general least-squares fitting API.
-
-## Examples and benchmarks
-
-The build provides four examples:
-
-```sh
-./build/examples/sample_usage
-./build/examples/linear_fit
-./build/examples/jacobi_interpolation
-./build/examples/checked_solve
-```
-
-For multi-configuration generators, executables are under the corresponding
-`Release` or `Debug` subdirectory. `checked_solve` demonstrates a residual check
-and handling a singular-system exception.
-
-```sh
-cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release -DBUILD_BENCHMARKS=ON
-cmake --build build/release --config Release --parallel
-./build/release/matrix_benchmark
-```
-
-The benchmark reports CSV for square multiplication, a dense-batch multiplication
-shape, and a multi-RHS solve. See [methodology and measured results](docs/benchmarks.md).
-These are single-threaded CPU microbenchmarks, not neural-network training results
-or comparisons against optimized BLAS implementations.
-
-## Python and CPPNN
-
-Python bindings and neural-network training are not part of this release-hardening
-pass. Invariant currently has no Python package. Neural-network layers and
-CIFAR-10/MNIST workflows belong in the existing
-[CPPNN project](https://github.com/SimonVutov/CPPNN).
-
-CPPNN can consume Invariant as a numerical dependency; neural-network layers stay in CPPNN.
+MIT licensed; see [LICENSE](LICENSE). This project originated from Waterloo ECE115
+and ECE204 material, with original code adapted from Douglas Wilhelm Harder's lessons.

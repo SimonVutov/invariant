@@ -8,7 +8,7 @@ This repository is a header-only C++17 library focused on Matrix, Vector, and Po
 
 - **Header-only library:** All core logic is in template headers under `include/invariant/`.
 - **Focus:** Implements mathematical functions and algorithms relevant to linear algebra and numerical methods.
-- **Goal:** Build a reusable C++ library, with potential future Python bindings via pybind11.
+- **Goal:** Build a reusable C++ library, with optional Python bindings via pybind11.
 
 ## Developer Workflows
 
@@ -29,7 +29,7 @@ This repository is a header-only C++17 library focused on Matrix, Vector, and Po
 - **C++17** is the minimum required standard.
 - **Naming:** Functions and classes follow C++ idioms; mathematical concepts are named after their textbook or lecture equivalents.
 - **Documentation:** See `readme.md` for project intent and background.
-- **External dependencies:** None at present. Future plans may include pybind11 for Python integration.
+- **Dependencies:** C++ is dependency-free; optional Python bindings use pybind11 and scikit-build-core.
 - **Adding new functionality:** Add new methods to the appropriate header in `include/invariant/`. Follow the style of existing code (e.g., member methods on `Matrix<T>`).
 - **Adding new examples:** Create a `.cpp` file in `examples/`, add it to `examples/CMakeLists.txt`, and document it in `readme.md`.
 
@@ -58,3 +58,5 @@ For major changes, update this file to keep AI agents productive.
 - Run examples and Debug/Release/sanitizer checks when changing core numerics.
 - Optional benchmarks are enabled with `BUILD_BENCHMARKS=ON`.
 - Keep neural-network layers in CPPNN.
+
+- Python: `python -m pip install ".[test]"` then `python -m pytest`; build artifacts with `python -m build`.

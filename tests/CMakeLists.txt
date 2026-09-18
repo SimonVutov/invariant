@@ -13,3 +13,6 @@ add_test(NAME InstallSmoke COMMAND ${CMAKE_COMMAND}
     -DCOMPILER=${CMAKE_CXX_COMPILER}
     -DCONFIG=$<CONFIG>
     -P ${CMAKE_CURRENT_SOURCE_DIR}/install_smoke.cmake)
+add_executable(test_least_squares test_least_squares.cpp)
+target_link_libraries(test_least_squares PRIVATE invariant)
+add_test(NAME LeastSquaresTests COMMAND test_least_squares)
