@@ -10,7 +10,6 @@ git clone https://github.com/SimonVutov/invariant.git
 cd invariant
 ```
 
-Until the release work is merged, use `git checkout codex/release-0.1-hardening`.
 The commands below run from this repository.
 
 ## Python
@@ -133,7 +132,7 @@ cmake --build build/release --config Release --parallel
 ./build/release/matrix_benchmark
 ```
 
-The benchmark It uses seed 42, one warm-up, and seven repetitions, with
+The benchmark uses seed 42, one warm-up, and seven repetitions, with
 allocation included and correctness checks outside timing. Python benchmarks
 include conversion copies. [Sample C++ measurements](docs/benchmark-macos-arm64.csv)
 are machine-specific; neither benchmark establishes a universal speed advantage.
