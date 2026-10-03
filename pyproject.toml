@@ -1,0 +1,29 @@
+[build-system]
+requires = ["scikit-build-core>=0.11,<1", "pybind11>=3.0,<4"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "invariant-numerics"
+version = "0.1.0"
+description = "C++17 dense numerical routines with NumPy-friendly Python bindings"
+readme = "readme.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[project.urls]
+Repository = "https://github.com/SimonVutov/invariant"
+
+[tool.scikit-build]
+wheel.packages = ["python/invariant"]
+cmake.build-type = "Release"
+cmake.args = ["-DBUILD_PYTHON=ON", "-DBUILD_TESTS=OFF", "-DBUILD_EXAMPLES=OFF", "-DBUILD_BENCHMARKS=OFF"]
+install.components = ["python"]
+sdist.exclude = ["build", ".venv", ".github"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
